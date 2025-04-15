@@ -22,11 +22,13 @@ export const EditableWrapperToolbar = styled.div`
 `;
 
 export const EditableWrapper = styled.div`
-    &:hover {
-        border: 1px solid black;
+    &.enable {
+        &:hover {
+            border: 1px solid black;
 
-        ${EditableWrapperToolbar} {
-            display: block;
+            ${EditableWrapperToolbar} {
+                display: block;
+            }
         }
     }
 `;

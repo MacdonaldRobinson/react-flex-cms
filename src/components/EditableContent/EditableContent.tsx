@@ -58,6 +58,7 @@ import {
     EditableWrapperToolbar,
 } from "./EditableContent.styles";
 import { renderToStaticMarkup } from "react-dom/server";
+import useFirebaseAuth from "../../firebase/auth/useFirebaseAuth";
 
 function convertBase64ToBlob(base64: string): Blob {
     const arr = base64.split(",");
@@ -164,10 +165,15 @@ type TEditor = {
 
 const EditableContent = ({ contentId, children }: TEditor) => {
     const { updateContent, getContent } = useCMS();
-    const [content, setContent] = useState<string | null>(null);
-    const isInProgress = useRef(false);
+    const { authUser } = useFirebaseAuth();
+
     const [showEditor, setShowEditor] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+
+    const initialHtml = renderToStaticMarkup(children);
+
+    const [content, setContent] = useState<string | null>(null);
+    const isInProgress = useRef(false);
 
     const refEditor = useRef<React.ComponentRef<typeof RcTiptapEditor> | null>(
         null
@@ -178,14 +184,17 @@ const EditableContent = ({ contentId, children }: TEditor) => {
 
     useEffect(() => {
         async function fetchContent() {
-            if (isInProgress.current) return;
+            if (!authUser) {
+                setContent(initialHtml);
+                setIsLoading(false);
+                return;
+            }
 
-            const initialHtml = renderToStaticMarkup(children);
+            if (isInProgress.current) return;
 
             isInProgress.current = false;
             const foundContent = await getContent(contentId);
 
-            console.log(foundContent);
             isInProgress.current = true;
 
             if (foundContent) {
@@ -209,7 +218,7 @@ const EditableContent = ({ contentId, children }: TEditor) => {
         }
         setIsLoading(true);
         fetchContent();
-    }, [children, contentId, getContent, showEditor, updateContent]);
+    }, [authUser, children, contentId, getContent, showEditor, updateContent]);
 
     const debounceSetContent = debounce(async () => {
         if (isInProgress.current) return;
@@ -240,10 +249,12 @@ const EditableContent = ({ contentId, children }: TEditor) => {
     }, [showEditor]);
 
     return (
-        <EditableWrapper>
-            <EditableWrapperToolbar className={showEditor ? "show" : ""}>
-                <a onClick={handleToggleEditorClick}>Toggle Editor</a>
-            </EditableWrapperToolbar>
+        <EditableWrapper className={authUser ? "enable" : ""}>
+            {authUser && (
+                <EditableWrapperToolbar className={showEditor ? "show" : ""}>
+                    <a onClick={handleToggleEditorClick}>Toggle Editor</a>
+                </EditableWrapperToolbar>
+            )}
             {isLoading && <>Loading {contentId} ...</>}
             {content && !showEditor && !isLoading && (
                 <div

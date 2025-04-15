@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {auth}  from"../firebase.config"
 import {signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User} from "firebase/auth"
 
@@ -13,8 +13,12 @@ const useFirebaseAuth = ()=>{
         await signOut(auth)        
     }
 
-    onAuthStateChanged(auth, (user: User | null)=>{
-        setUser(user)
+    useEffect(()=>{
+        const unsubscribe = onAuthStateChanged(auth, (user: User | null)=>{
+            setUser(user)
+        })
+
+        return ()=> unsubscribe()
     })
 
     return {login, logout, authUser}

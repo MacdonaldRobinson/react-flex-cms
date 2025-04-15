@@ -1,8 +1,10 @@
+import AuthButton from "../../components/AuthButton/AuthButton";
 import EditableContent from "../../components/EditableContent/EditableContent";
 
 const HomePage = () => {
     return (
         <>
+            <AuthButton />
             <EditableContent contentId="Header">
                 <h1>Home Page</h1>
             </EditableContent>
