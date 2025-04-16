@@ -46,5 +46,8 @@
     "typescript": "~5.7.2",
     "vite": "^6.2.0",
     "vite-plugin-css-injected-by-js": "^3.5.2"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1"
   }
 }

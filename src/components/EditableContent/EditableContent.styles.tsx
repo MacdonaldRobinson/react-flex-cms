@@ -2,33 +2,46 @@ import styled from "styled-components";
 
 export const EditableWrapperToolbar = styled.div`
     display: none;
-    padding: 10px;
 
     &.show {
-        display: block;
+        display: flex;
+        flex-direction: row;
+        gap: 5px;
     }
 
-    & a {
-        padding: 2px;
-        border: 1px solid black;
-        background-color: gray;
-        color: white;
+    & button {
         cursor: pointer;
+    }
+`;
 
-        &:hover {
-            font-weight: bold;
-        }
+export const EditableWrapperInfoMessage = styled.div`
+    padding: 5px;
+    background-color: lightblue;
+    color: black;
+`;
+
+export const EditableWrapperHeader = styled.div`
+    display: none;
+
+    &.show {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+        background-color: lightgray;
     }
 `;
 
 export const EditableWrapper = styled.div`
-    &.enable {
-        &:hover {
-            border: 1px solid black;
+    &.IsShowingEditor {
+        cursor: auto;
+        margin-top: 10px;
+    }
 
-            ${EditableWrapperToolbar} {
-                display: block;
-            }
+    &.canEdit {
+        &:hover {
+            cursor: pointer;
+            border: 1px solid black;
         }
     }
 `;

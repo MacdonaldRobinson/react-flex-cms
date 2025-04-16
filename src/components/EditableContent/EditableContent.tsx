@@ -61,10 +61,13 @@ import "react-image-crop/dist/ReactCrop.css";
 import useCMS from "../../firebase/firestore/collections/CMS/useCMS";
 import {
     EditableWrapper,
+    EditableWrapperHeader,
+    EditableWrapperInfoMessage,
     EditableWrapperToolbar,
 } from "./EditableContent.styles";
 import { renderToStaticMarkup } from "react-dom/server";
 import useFirebaseAuth from "../../firebase/auth/useFirebaseAuth";
+import clsx from "clsx";
 
 function convertBase64ToBlob(base64: string): Blob {
     const arr = base64.split(",");
@@ -174,7 +177,10 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
     const { authUser } = useFirebaseAuth();
 
     const [showEditor, setShowEditor] = useState(false);
+    const [canEdit, setCanEdit] = useState(false);
+
     const [isLoading, setIsLoading] = useState(true);
+    const [info, setInfo] = useState("");
 
     const initialHtml = useMemo(
         () => renderToStaticMarkup(children),
@@ -194,23 +200,32 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
         const html = refEditor.current?.editor?.getHTML();
 
         if (html && content != html) {
-            await updateContent(contentId, {
-                contentValue: html,
-            });
+            try {
+                const returnData = await updateContent(contentId, {
+                    contentValue: html,
+                });
 
-            setContent(html);
+                setContent(html);
+                setInfo("");
+            } catch (error) {
+                setInfo(error!.toString());
+            }
+        } else {
+            setInfo("No changes made");
         }
         setIsLoading(false);
-    }, 1000);
+    }, 100);
 
-    const onValueChange = useCallback(async () => {
-        console.log("onValueChange");
-        debounceSetContent();
-    }, [debounceSetContent]);
+    const onValueChange = useCallback(async () => {}, [debounceSetContent]);
 
     const handleToggleEditorClick = useCallback(() => {
         setShowEditor(!showEditor);
     }, [showEditor]);
+
+    const handleSaveClick = useCallback(() => {
+        setInfo("Saving ...");
+        debounceSetContent();
+    }, []);
 
     useEffect(() => {
         const fetchContent = async () => {
@@ -227,14 +242,36 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
         };
         setIsLoading(true);
         fetchContent();
+        if (authUser) {
+            setCanEdit(true);
+        } else {
+            setCanEdit(false);
+        }
     }, [authUser, contentId, getContent, initialHtml]);
 
     return (
-        <EditableWrapper className={authUser ? "enable" : ""}>
-            {authUser && (
-                <EditableWrapperToolbar className={showEditor ? "show" : ""}>
-                    <a onClick={handleToggleEditorClick}>Toggle Editor</a>
-                </EditableWrapperToolbar>
+        <EditableWrapper
+            className={clsx({ IsShowingEditor: showEditor, canEdit: canEdit })}
+            onClick={() =>
+                canEdit && !showEditor ? handleToggleEditorClick() : null
+            }
+        >
+            {authUser && canEdit && (
+                <EditableWrapperHeader className={showEditor ? "show" : ""}>
+                    <EditableWrapperToolbar
+                        className={showEditor ? "show" : ""}
+                    >
+                        <button onClick={handleToggleEditorClick}>
+                            Toggle Editor
+                        </button>
+                        <button onClick={handleSaveClick}>Save</button>
+                    </EditableWrapperToolbar>
+                    {info && (
+                        <EditableWrapperInfoMessage>
+                            {info}
+                        </EditableWrapperInfoMessage>
+                    )}
+                </EditableWrapperHeader>
             )}
             {isLoading && <>Loading {contentId} ...</>}
             {content && !showEditor && !isLoading && (
@@ -244,7 +281,7 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
                 ></div>
             )}
             <div>
-                {content && showEditor && !isLoading && (
+                {content && canEdit && showEditor && !isLoading && (
                     <RcTiptapEditor
                         ref={refEditor}
                         output="html"

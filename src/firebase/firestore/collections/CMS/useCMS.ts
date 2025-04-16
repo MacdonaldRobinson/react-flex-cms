@@ -21,88 +21,56 @@ type TOutputSchema = TDataStoreSchema & {
 }
 
 const collectionName = "CMS"
-const contentsPath: string[] = [window.location.host, "contents"]
+const contentsPath: string[] = [window.location.hostname, "contents"]
 
 const cmsCollectionRef = collection(firestore, collectionName, ...contentsPath)
 
 const useCMS = ()=>{
     const {authUser} = useFirebaseAuth()
-    const isInProgress = useRef(false)
-
-    const requireLogin = useCallback(()=>{
-        if(!authUser)
-        {
-            throw new Error("You must be logged in")
-        }    
-    }, [authUser])
 
     const getContent = useCallback(async (contentId: string)=>{
-        try{
-            console.log("useCMS > getContent", isInProgress.current)
-            
-            if(isInProgress.current)
-                return;
-    
-            isInProgress.current = true
-            
-            const queryRef = query(cmsCollectionRef, where("contentId", "==", contentId))
-            
-            console.log("ran")
-            const docRefs = await getDocs(queryRef);
 
-                    
-            if(docRefs.size == 0)
-            {
-                isInProgress.current = false
-    
-                console.error("Found no items with contentId")
-                return null;
-            }
-    
-            if(docRefs.size > 1)
-            {
-                isInProgress.current = false
-                throw new Error("Found multiple items with the same contentId")
-            }        
-    
-            const docRef = docRefs.docs[0];
-            const docData: TDataStoreSchema = docRef.data() as TDataStoreSchema;        
-    
-            if(!docData)
-            {   
-                isInProgress.current = false
-                return null;
-            }
-    
-            const response: TOutputSchema = {
-                ...docData,
-                contentId:docData.contentId,
-                documentId: docRef.id
-            }        
-    
-            isInProgress.current = false
-            return response;
-        }
-        catch(error){
-            console.error(error)
+        console.log("useCMS > getContent")
+        
+        const queryRef = query(cmsCollectionRef, where("contentId", "==", contentId))
+        
+        const docRefs = await getDocs(queryRef);
+
+        if(docRefs.size == 0)
+        {
+            console.error("Found no items with contentId", contentId)
             return null;
         }
-    },[requireLogin])
+
+        if(docRefs.size > 1)
+        {
+            throw new Error("Found multiple items with the same contentId")
+        }        
+
+        const docRef = docRefs.docs[0];
+        const docData: TDataStoreSchema = docRef.data() as TDataStoreSchema;        
+
+        if(!docData)
+        {   
+            return null;
+        }
+
+        const response: TOutputSchema = {
+            ...docData,
+            contentId:docData.contentId,
+            documentId: docRef.id
+        }        
+
+        return response;        
+    },[])
     
     const addContent = useCallback(async (contentId: string, contentParams: TInputSchema)=>{
-        requireLogin()
-        console.log("useCMS > addContent", isInProgress.current)
+        console.log("useCMS > addContent")
 
-        if(isInProgress.current)
-            return;
-
-        isInProgress.current = false
         const docData = await getContent(contentId)
-        isInProgress.current = true
 
         if(docData)
         {            
-            isInProgress.current = false         
             return docData;
         }
 
@@ -117,37 +85,27 @@ const useCMS = ()=>{
 
         await addDoc(cmsCollectionRef, dataSchema)
 
-        isInProgress.current = false
         const docDataSchema = await getContent(contentId)
-        isInProgress.current = true
         
         if(!docDataSchema){
-            console.error("Error loading data")
-            isInProgress.current = false         
+            console.error("Error loading data") 
             return null;
         }
         
         const newResponse: TOutputSchema = {
             ...docDataSchema
         }
-
-        isInProgress.current = false         
+      
         return newResponse
-    },[authUser?.uid, getContent, requireLogin])
+    },[authUser?.uid, getContent])
 
     const updateContent = useCallback(async (contentId: string, contentParams: TInputSchema)=>{
-        requireLogin()
-        console.log("useCMS > updateContent", isInProgress.current)
+        console.log("useCMS > updateContent")
 
-        if(isInProgress.current)
-            return;
-
-        const docData = await getContent(contentId)
-        isInProgress.current = true        
+        const docData = await getContent(contentId)   
 
         if(!docData)
-        {          
-            isInProgress.current = false         
+        {             
             const content = await addContent(contentId, contentParams);  
 
             return content;
@@ -165,11 +123,12 @@ const useCMS = ()=>{
         
         await updateDoc(docRef, dataSchema)
 
-        isInProgress.current = false
-        const updatedDocData = await getContent(contentId)        
+        const updatedDocData = await getContent(contentId)     
+        
+        console.log("updatedDocData", updatedDocData)
 
         return updatedDocData;
-    },[addContent, authUser?.uid, getContent, requireLogin])
+    },[addContent, authUser?.uid, getContent])
 
     return { addContent, updateContent, getContent }
 }
