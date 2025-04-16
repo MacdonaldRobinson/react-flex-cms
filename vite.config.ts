@@ -1,26 +1,30 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
+import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    cssInjectedByJsPlugin()
+  ],
   build: {
     lib: {
-      entry: path.resolve(__dirname, 'src/index.ts'), // your entry point
+      entry: path.resolve(__dirname, 'src/index.ts'),
       name: 'FlexCMS',
-      fileName: (format) => `index.${format}.js`, // generate both es and cjs files
-      formats: ['es', 'cjs'], // output ES module and CommonJS
+      fileName: (format) => `index.${format}.js`,
+      formats: ['es', 'cjs']
     },
-    outDir: 'build', // the output folder
-    emptyOutDir: true, // clean the output folder before each build
+    outDir: 'build',
+    emptyOutDir: true,
     rollupOptions: {
-      external: ['react', 'react-dom'], // don't bundle peer dependencies
+      external: ['react', 'react-dom'],
       output: {
         globals: {
           react: 'React',
-          'react-dom': 'ReactDOM',
-        },
-      },
-    },
-  },
-});
+          'react-dom': 'ReactDOM'
+        }
+      }
+    }
+  }
+})

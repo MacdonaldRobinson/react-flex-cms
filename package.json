@@ -44,6 +44,7 @@
     "reactjs-tiptap-editor": "^0.2.29",
     "styled-components": "^6.1.17",
     "typescript": "~5.7.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "vite-plugin-css-injected-by-js": "^3.5.2"
   }
 }
