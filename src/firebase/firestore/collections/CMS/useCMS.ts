@@ -37,50 +37,56 @@ const useCMS = ()=>{
     }, [authUser])
 
     const getContent = useCallback(async (contentId: string)=>{
-        requireLogin()
-        
-        console.log("useCMS > getContent", isInProgress.current)
+        try{
+            console.log("useCMS > getContent", isInProgress.current)
+            
+            if(isInProgress.current)
+                return;
+    
+            isInProgress.current = true
+            
+            const queryRef = query(cmsCollectionRef, where("contentId", "==", contentId))
+            
+            console.log("ran")
+            const docRefs = await getDocs(queryRef);
 
-        if(isInProgress.current)
-            return;
-
-        isInProgress.current = true
-                
-        const queryRef = query(cmsCollectionRef, where("contentId", "==", contentId))
-
-        const docRefs = await getDocs(queryRef);
-
-        if(docRefs.size == 0)
-        {
+                    
+            if(docRefs.size == 0)
+            {
+                isInProgress.current = false
+    
+                console.error("Found no items with contentId")
+                return null;
+            }
+    
+            if(docRefs.size > 1)
+            {
+                isInProgress.current = false
+                throw new Error("Found multiple items with the same contentId")
+            }        
+    
+            const docRef = docRefs.docs[0];
+            const docData: TDataStoreSchema = docRef.data() as TDataStoreSchema;        
+    
+            if(!docData)
+            {   
+                isInProgress.current = false
+                return null;
+            }
+    
+            const response: TOutputSchema = {
+                ...docData,
+                contentId:docData.contentId,
+                documentId: docRef.id
+            }        
+    
             isInProgress.current = false
-
-            console.error("Found no items with contentId")
+            return response;
+        }
+        catch(error){
+            console.error(error)
             return null;
         }
-
-        if(docRefs.size > 1)
-        {
-            isInProgress.current = false
-            throw new Error("Found multiple items with the same contentId")
-        }        
-
-        const docRef = docRefs.docs[0];
-        const docData: TDataStoreSchema = docRef.data() as TDataStoreSchema;
-
-        if(!docData)
-        {   
-            isInProgress.current = false
-            return null;
-        }
-
-        const response: TOutputSchema = {
-            ...docData,
-            contentId:docData.contentId,
-            documentId: docRef.id
-        }
-
-        isInProgress.current = false
-        return response;
     },[requireLogin])
     
     const addContent = useCallback(async (contentId: string, contentParams: TInputSchema)=>{

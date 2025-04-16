@@ -1,4 +1,10 @@
-import React, { useCallback, useState, useRef, useEffect } from "react";
+import React, {
+    useCallback,
+    useState,
+    useRef,
+    useEffect,
+    useMemo,
+} from "react";
 import RcTiptapEditor from "reactjs-tiptap-editor";
 import { debounce } from "lodash";
 import {
@@ -163,17 +169,19 @@ type TEditor = {
     onContentChange?: (value: string) => void;
 };
 
-const EditableContent = ({ contentId, children }: TEditor) => {
+const EditableContent = React.memo(({ contentId, children }: TEditor) => {
     const { updateContent, getContent } = useCMS();
     const { authUser } = useFirebaseAuth();
 
     const [showEditor, setShowEditor] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const initialHtml = renderToStaticMarkup(children);
+    const initialHtml = useMemo(
+        () => renderToStaticMarkup(children),
+        [children]
+    );
 
     const [content, setContent] = useState<string | null>(null);
-    const isInProgress = useRef(false);
 
     const refEditor = useRef<React.ComponentRef<typeof RcTiptapEditor> | null>(
         null
@@ -182,49 +190,7 @@ const EditableContent = ({ contentId, children }: TEditor) => {
     const [theme] = useState<"light" | "dark">("light");
     const [disable] = useState<boolean>(false);
 
-    useEffect(() => {
-        async function fetchContent() {
-            if (!authUser) {
-                setContent(initialHtml);
-                setIsLoading(false);
-                return;
-            }
-
-            if (isInProgress.current) return;
-
-            isInProgress.current = false;
-            const foundContent = await getContent(contentId);
-
-            isInProgress.current = true;
-
-            if (foundContent) {
-                console.log("Setting found content");
-
-                setContent(foundContent.contentValue);
-            }
-
-            if (!foundContent) {
-                console.log("Setting initial content");
-
-                await updateContent(contentId, {
-                    contentValue: initialHtml,
-                });
-
-                setContent(initialHtml);
-            }
-
-            isInProgress.current = false;
-            setIsLoading(false);
-        }
-        setIsLoading(true);
-        fetchContent();
-    }, [authUser, children, contentId, getContent, showEditor, updateContent]);
-
     const debounceSetContent = debounce(async () => {
-        if (isInProgress.current) return;
-
-        isInProgress.current = true;
-
         const html = refEditor.current?.editor?.getHTML();
 
         if (html && content != html) {
@@ -234,19 +200,34 @@ const EditableContent = ({ contentId, children }: TEditor) => {
 
             setContent(html);
         }
-
-        isInProgress.current = false;
         setIsLoading(false);
     }, 1000);
 
     const onValueChange = useCallback(async () => {
+        console.log("onValueChange");
         debounceSetContent();
     }, [debounceSetContent]);
 
     const handleToggleEditorClick = useCallback(() => {
-        setIsLoading(true);
         setShowEditor(!showEditor);
     }, [showEditor]);
+
+    useEffect(() => {
+        const fetchContent = async () => {
+            const data = await getContent(contentId);
+            console.log("fetchContent", data);
+
+            if (data) {
+                setContent(data.contentValue);
+                setIsLoading(false);
+            } else {
+                setContent(initialHtml);
+                setIsLoading(false);
+            }
+        };
+        setIsLoading(true);
+        fetchContent();
+    }, [authUser, contentId, getContent, initialHtml]);
 
     return (
         <EditableWrapper className={authUser ? "enable" : ""}>
@@ -277,6 +258,6 @@ const EditableContent = ({ contentId, children }: TEditor) => {
             </div>
         </EditableWrapper>
     );
-};
+});
 
 export default EditableContent;
