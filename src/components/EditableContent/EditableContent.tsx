@@ -5,7 +5,7 @@ import React, {
     useEffect,
     useMemo,
 } from "react";
-import RcTiptapEditor from "reactjs-tiptap-editor";
+import RcTiptapEditor, { useEditorState } from "reactjs-tiptap-editor";
 import { debounce } from "lodash";
 import {
     BaseKit,
@@ -182,6 +182,8 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
     const [isLoading, setIsLoading] = useState(true);
     const [info, setInfo] = useState("");
 
+    const { isReady, editor, editorRef } = useEditorState();
+
     const initialHtml = useMemo(
         () => renderToStaticMarkup(children),
         [children]
@@ -189,15 +191,11 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
 
     const [content, setContent] = useState<string | null>(null);
 
-    const refEditor = useRef<React.ComponentRef<typeof RcTiptapEditor> | null>(
-        null
-    );
-
     const [theme] = useState<"light" | "dark">("light");
     const [disable] = useState<boolean>(false);
 
     const debounceSetContent = debounce(async () => {
-        const html = refEditor.current?.editor?.getHTML();
+        const html = editor?.getHTML();
 
         if (html && content != html) {
             try {
@@ -226,7 +224,7 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
         if (canEdit && !showEditor) {
             handleToggleEditorClick();
         }
-    }, [canEdit]);
+    }, [canEdit, showEditor]);
 
     const handleSaveClick = useCallback(() => {
         setInfo("Saving ...");
@@ -236,7 +234,6 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
     useEffect(() => {
         const fetchContent = async () => {
             const data = await getContent(contentId);
-            console.log("fetchContent", data);
 
             if (data) {
                 setContent(data.contentValue);
@@ -287,7 +284,7 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
             <div>
                 {content && canEdit && showEditor && !isLoading && (
                     <RcTiptapEditor
-                        ref={refEditor}
+                        ref={editorRef}
                         output="html"
                         content={content}
                         onChangeContent={onValueChange}
