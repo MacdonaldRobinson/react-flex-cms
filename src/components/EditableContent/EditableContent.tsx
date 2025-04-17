@@ -58,16 +58,22 @@ import "katex/dist/katex.min.css";
 import "easydrawer/styles.css";
 import "reactjs-tiptap-editor/style.css";
 import "react-image-crop/dist/ReactCrop.css";
-import useCMS from "../../firebase/firestore/collections/CMS/useCMS";
+import useCMS, {
+    TContentHistory,
+} from "../../firebase/firestore/collections/CMS/useCMS";
 import {
     EditableWrapper,
     EditableWrapperHeader,
     EditableWrapperInfoMessage,
     EditableWrapperToolbar,
+    EditorHistory,
+    EditorHistoryWrapper,
+    EditorWrapper,
 } from "./EditableContent.styles";
 import { renderToStaticMarkup } from "react-dom/server";
 import useFirebaseAuth from "../../firebase/auth/useFirebaseAuth";
 import clsx from "clsx";
+import { format } from "date-fns";
 
 function convertBase64ToBlob(base64: string): Blob {
     const arr = base64.split(",");
@@ -173,7 +179,7 @@ type TEditor = {
 };
 
 const EditableContent = React.memo(({ contentId, children }: TEditor) => {
-    const { updateContent, getContent } = useCMS();
+    const { addContent, getContentHistory } = useCMS();
     const { authUser } = useFirebaseAuth();
 
     const [showEditor, setShowEditor] = useState(false);
@@ -182,29 +188,33 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
     const [isLoading, setIsLoading] = useState(true);
     const [info, setInfo] = useState("");
 
-    const { isReady, editor, editorRef } = useEditorState();
+    const [contentHistory, setContentHistory] =
+        useState<TContentHistory | null>();
+
+    const { editorRef } = useEditorState();
 
     const initialHtml = useMemo(
         () => renderToStaticMarkup(children),
         [children]
     );
 
-    const [content, setContent] = useState<string | null>(null);
+    const [_content, _setContent] = useState<string>("");
 
     const [theme] = useState<"light" | "dark">("light");
     const [disable] = useState<boolean>(false);
 
-    const debounceSetContent = debounce(async () => {
-        const html = editor?.getHTML();
+    const debounceAddContent = debounce(async () => {
+        const html = editorRef.current?.editor?.getHTML();
 
-        if (html && content != html) {
+        if (html) {
             try {
-                const returnData = await updateContent(contentId, {
+                const contentHistory = await addContent(contentId, {
                     contentValue: html,
                 });
 
                 setContent(html);
                 setInfo("");
+                setContentHistory(contentHistory);
             } catch (error) {
                 setInfo(error!.toString());
             }
@@ -214,10 +224,18 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
         setIsLoading(false);
     }, 100);
 
-    const onValueChange = useCallback(async () => {}, [debounceSetContent]);
+    const onValueChange = useCallback(async () => {}, []);
+
+    const setEditorContent = useCallback((newContent: string) => {
+        console.log("setEditorContent");
+        editorRef.current?.editor?.commands.setContent(newContent);
+    }, []);
 
     const handleToggleEditorClick = useCallback(() => {
         setShowEditor(!showEditor);
+        if (!showEditor) {
+            setEditorContent(_content);
+        }
     }, [showEditor]);
 
     const handleEditableContentClick = useCallback(() => {
@@ -228,16 +246,60 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
 
     const handleSaveClick = useCallback(() => {
         setInfo("Saving ...");
-        debounceSetContent();
+        debounceAddContent();
     }, []);
+
+    const setContent = (newValue: string) => {
+        const parser = new DOMParser();
+        const parsedValue = parser.parseFromString(newValue, "text/html");
+
+        const textContent = parsedValue
+            .querySelector("body")
+            ?.firstChild?.textContent?.trim();
+
+        let newContent = newValue;
+
+        if (textContent == "") {
+            newContent = "";
+        }
+
+        _setContent(newContent);
+    };
 
     useEffect(() => {
         const fetchContent = async () => {
-            const data = await getContent(contentId);
+            const contentHistory = await getContentHistory(contentId);
 
-            if (data) {
-                setContent(data.contentValue);
-                setIsLoading(false);
+            if (contentHistory) {
+                const value = contentHistory.items[0].contentValue;
+
+                if (value) {
+                    if (canEdit) {
+                        const parser = new DOMParser();
+                        const parsedValue = parser.parseFromString(
+                            value,
+                            "text/html"
+                        );
+
+                        const textContent = parsedValue
+                            .querySelector("body")
+                            ?.firstChild?.textContent?.trim();
+
+                        let newContent = value;
+
+                        if (textContent == "") {
+                            newContent = "";
+                        }
+
+                        setContent(newContent);
+                        setContentHistory(contentHistory);
+                    } else {
+                        setContent(value);
+                    }
+                    setIsLoading(false);
+                } else {
+                    setContent(`Empty content for contentId ${contentId}`);
+                }
             } else {
                 setContent(initialHtml);
                 setIsLoading(false);
@@ -250,7 +312,18 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
         } else {
             setCanEdit(false);
         }
-    }, [authUser, contentId, getContent, initialHtml]);
+    }, [authUser, contentId, getContentHistory, initialHtml, canEdit]);
+
+    const handleHistoryClick = useCallback(
+        (historyIndex: number) => {
+            const historyItem = contentHistory?.items[historyIndex];
+
+            if (historyItem) {
+                setEditorContent(historyItem.contentValue);
+            }
+        },
+        [contentHistory]
+    );
 
     return (
         <EditableWrapper
@@ -275,25 +348,57 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
                 </EditableWrapperHeader>
             )}
             {isLoading && <>Loading {contentId} ...</>}
-            {content && !showEditor && !isLoading && (
-                <div
-                    className="tiptap ProseMirror"
-                    dangerouslySetInnerHTML={{ __html: content ?? "" }}
-                ></div>
+            {!showEditor && !isLoading && (
+                <>
+                    {_content && (
+                        <div
+                            className="tiptap ProseMirror"
+                            dangerouslySetInnerHTML={{ __html: _content ?? "" }}
+                        ></div>
+                    )}
+                    {!_content && canEdit && (
+                        <div>No content for contentId: {contentId}</div>
+                    )}
+                </>
             )}
-            <div>
-                {content && canEdit && showEditor && !isLoading && (
+            {canEdit && showEditor && !isLoading && (
+                <EditorWrapper>
                     <RcTiptapEditor
                         ref={editorRef}
                         output="html"
-                        content={content}
+                        content={_content}
                         onChangeContent={onValueChange}
                         extensions={extensions}
                         dark={theme === "dark"}
                         disabled={disable}
                     />
-                )}
-            </div>
+                    <EditorHistoryWrapper>
+                        <div>
+                            History for: <span>{contentId}</span>
+                        </div>
+                        <EditorHistory multiple>
+                            {contentHistory &&
+                                contentHistory.items.map(
+                                    (historyItem, index) => {
+                                        return (
+                                            <option
+                                                key={historyItem.documentId}
+                                                onClick={(e) =>
+                                                    handleHistoryClick(index)
+                                                }
+                                            >
+                                                {format(
+                                                    historyItem.createdOn,
+                                                    "yyyy-MM-dd hh:mm:ss"
+                                                )}
+                                            </option>
+                                        );
+                                    }
+                                )}
+                        </EditorHistory>
+                    </EditorHistoryWrapper>
+                </EditorWrapper>
+            )}
         </EditableWrapper>
     );
 });

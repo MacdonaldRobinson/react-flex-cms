@@ -1,4 +1,4 @@
-import { collection, addDoc, updateDoc, doc, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, query, where, getDocs, orderBy, Timestamp } from "firebase/firestore";
 import {firestore, auth} from  "../../../firebase.config"
 import useFirebaseAuth from "../../../auth/useFirebaseAuth";
 import { useCallback, useRef } from "react";
@@ -20,62 +20,75 @@ type TOutputSchema = TDataStoreSchema & {
     documentId: string;
 }
 
+export type TContentHistory = {
+    items: TOutputSchema[]
+}
+
 const collectionName = "CMS"
 const contentsPath: string[] = [window.location.hostname, "contents"]
 
 const cmsCollectionRef = collection(firestore, collectionName, ...contentsPath)
 
 const useCMS = ()=>{
-    const getContent = useCallback(async (contentId: string)=>{
+    const toDateSafe = (input: Date | Timestamp | null | undefined): Date | null => {
+        if (!input) return null;
+      
+        // Firestore Timestamp has a .toDate() method
+        if (typeof input === "object" && "toDate" in input && typeof input.toDate === "function") {
+          return input.toDate();
+        }
+      
+        // Already a Date object
+        if (input instanceof Date) {
+          return input;
+        }
+      
+        return null; // fallback for unexpected types
+      }
+
+    const getContentHistory = useCallback(async (contentId: string): Promise<TContentHistory | null>=>{
 
         console.log("useCMS > getContent")
         
-        const queryRef = query(cmsCollectionRef, where("contentId", "==", contentId))
+        const queryRef = query(
+            cmsCollectionRef, 
+            where("contentId", "==", contentId), 
+            orderBy("createdOn", "desc")
+        )
         
         const docRefs = await getDocs(queryRef);
 
-        if(docRefs.size == 0)
-        {
-            console.error("Found no items with contentId", contentId)
-            return null;
+        if(docRefs.empty){
+            console.warn("No documents found for contentId: ", contentId)
+            return null
         }
 
-        if(docRefs.size > 1)
-        {
-            throw new Error("Found multiple items with the same contentId")
-        }        
+        const contentHistory = docRefs.docs.map((docRef)=>{
+            const docData: TDataStoreSchema = docRef.data() as TDataStoreSchema;        
+            const outputSchema: TOutputSchema = {
+                ...docData,
+                documentId: docRef.id,
+                createdOn: toDateSafe(docData.createdOn)!,
+                updatedOn: toDateSafe(docData.updatedOn)!
 
-        const docRef = docRefs.docs[0];
-        const docData: TDataStoreSchema = docRef.data() as TDataStoreSchema;        
+            }
+            return outputSchema;            
+        })
 
-        if(!docData)
-        {   
-            return null;
+        const newContentHistory:TContentHistory = {
+            items: contentHistory
         }
 
-        const response: TOutputSchema = {
-            ...docData,
-            contentId:docData.contentId,
-            documentId: docRef.id
-        }        
-
-        return response;        
+        return newContentHistory;        
     },[])
     
-    const addContent = useCallback(async (contentId: string, contentParams: TInputSchema)=>{
+    const addContent = useCallback(async (contentId: string, contentParams: TInputSchema): Promise<TContentHistory | null>=>{
         console.log("useCMS > addContent")
         
         if(!auth.currentUser){
             throw new Error("You need to login inorder to perform this operation")
         }
         
-        const docData = await getContent(contentId)
-
-        if(docData)
-        {            
-            return docData;
-        }
-
         const dataSchema: TDataStoreSchema = {
             ...contentParams,
             contentId:contentId,
@@ -87,54 +100,17 @@ const useCMS = ()=>{
 
         await addDoc(cmsCollectionRef, dataSchema)
 
-        const docDataSchema = await getContent(contentId)
+        const contentHistory = await getContentHistory(contentId)
         
-        if(!docDataSchema){
+        if(!contentHistory){
             console.error("Error loading data") 
             return null;
         }
-        
-        const newResponse: TOutputSchema = {
-            ...docDataSchema
-        }
-      
-        return newResponse
-    },[getContent])
 
-    const updateContent = useCallback(async (contentId: string, contentParams: TInputSchema)=>{
-        console.log("useCMS > updateContent")
+        return contentHistory
+    },[getContentHistory])
 
-        if(!auth.currentUser){
-            throw new Error("You need to login inorder to perform this operation")
-        }
-
-        const docData = await getContent(contentId)   
-
-        if(!docData)
-        {             
-            const content = await addContent(contentId, contentParams);  
-
-            return content;
-        }
-
-        const docRef = doc(firestore, collectionName, ...contentsPath, docData.documentId)
-        
-        const dataSchema: TDataStoreSchema = {
-            ...docData,
-            ...contentParams, 
-            authUserId: auth.currentUser?.uid ?? "",   
-            updatedOn: new Date(),
-            pageUrl: window.location.href
-        }
-
-        await updateDoc(docRef, dataSchema)
-
-        const updatedDocData = await getContent(contentId)     
-        
-        return updatedDocData;
-    },[addContent, getContent])
-
-    return { addContent, updateContent, getContent }
+    return { addContent, getContentHistory }
 }
 
 export default useCMS;

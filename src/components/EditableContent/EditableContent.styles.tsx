@@ -32,20 +32,38 @@ export const EditableWrapperHeader = styled.div`
 `;
 
 export const EditableWrapper = styled.div`
-    &:hover {
-        &:not(.IsShowingEditor) {
-            cursor: pointer;
-            border: 1px solid black;
-        }
-    }
-
-    &.IsShowingEditor {
-        cursor: auto;
-        margin-top: 10px;
-        background-color: lightgray;
-        border: 1px solid black;
-
+    &.canEdit {
         &:hover {
+            &:not(.IsShowingEditor) {
+                cursor: pointer;
+                border: 1px solid black;
+            }
+        }
+
+        &.IsShowingEditor {
+            cursor: auto;
+            margin-top: 10px;
+            background-color: lightgray;
+            border: 1px solid black;
+
+            &:hover {
+            }
         }
     }
+`;
+
+export const EditorWrapper = styled.div`
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+`;
+
+export const EditorHistoryWrapper = styled.div`
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+`;
+
+export const EditorHistory = styled.select`
+    height: 100%;
 `;
