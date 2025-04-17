@@ -1,6 +1,14 @@
 import useFirebaseAuth from "../../firebase/auth/useFirebaseAuth";
 
-const AuthButton = () => {
+export type TAuthButton = {
+    loginText?: string;
+    logoutText?: string;
+};
+
+const AuthButton = ({
+    loginText = "Login",
+    logoutText = "Logout",
+}: TAuthButton) => {
     const { login, logout, authUser } = useFirebaseAuth();
 
     const handleLogin = async () => {
@@ -13,8 +21,8 @@ const AuthButton = () => {
 
     return (
         <>
-            {!authUser && <button onClick={handleLogin}>Login</button>}
-            {authUser && <button onClick={handleLogout}>Logout</button>}
+            {!authUser && <button onClick={handleLogin}>{loginText}</button>}
+            {authUser && <button onClick={handleLogout}>{logoutText}</button>}
         </>
     );
 };

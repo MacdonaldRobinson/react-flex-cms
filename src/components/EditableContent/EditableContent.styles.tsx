@@ -32,6 +32,23 @@ export const EditableWrapperHeader = styled.div`
 `;
 
 export const EditableWrapper = styled.div`
+    & .ProseMirror {
+        padding: 0 !important;
+        margin: 0 !important;
+        min-height: auto !important;
+
+        & h1,
+        h2,
+        h3 {
+            margin-top: 1rem;
+        }
+
+        & ul {
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+    }
+
     &.canEdit {
         &:hover {
             &:not(.IsShowingEditor) {
@@ -41,6 +58,12 @@ export const EditableWrapper = styled.div`
         }
 
         &.IsShowingEditor {
+            & .ProseMirror {
+                padding: 10px !important;
+                margin: 10px !important;
+                min-height: inherit !important;
+            }
+
             cursor: auto;
             margin-top: 10px;
             background-color: lightgray;
@@ -62,8 +85,25 @@ export const EditorHistoryWrapper = styled.div`
     display: flex;
     flex-direction: column;
     min-width: 200px;
+    background-color: darkgray;
+    padding: 5px;
 `;
 
 export const EditorHistory = styled.select`
     height: 100%;
+    padding: 5px;
+    & option {
+        padding: 5px;
+        cursor: pointer;
+
+        &:hover {
+            background-color: lightgray;
+        }
+    }
+`;
+
+export const EditorHistoryLabel = styled.div`
+    & span {
+        font-weight: bold;
+    }
 `;
