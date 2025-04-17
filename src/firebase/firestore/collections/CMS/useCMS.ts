@@ -1,5 +1,5 @@
 import { collection, addDoc, updateDoc, doc, query, where, getDocs } from "firebase/firestore";
-import {firestore} from  "../../../firebase.config"
+import {firestore, auth} from  "../../../firebase.config"
 import useFirebaseAuth from "../../../auth/useFirebaseAuth";
 import { useCallback, useRef } from "react";
 
@@ -26,8 +26,6 @@ const contentsPath: string[] = [window.location.hostname, "contents"]
 const cmsCollectionRef = collection(firestore, collectionName, ...contentsPath)
 
 const useCMS = ()=>{
-    const {authUser} = useFirebaseAuth()
-
     const getContent = useCallback(async (contentId: string)=>{
 
         console.log("useCMS > getContent")
@@ -66,7 +64,11 @@ const useCMS = ()=>{
     
     const addContent = useCallback(async (contentId: string, contentParams: TInputSchema)=>{
         console.log("useCMS > addContent")
-
+        
+        if(!auth.currentUser){
+            throw new Error("You need to login inorder to perform this operation")
+        }
+        
         const docData = await getContent(contentId)
 
         if(docData)
@@ -77,7 +79,7 @@ const useCMS = ()=>{
         const dataSchema: TDataStoreSchema = {
             ...contentParams,
             contentId:contentId,
-            authUserId: authUser?.uid ?? "",
+            authUserId: auth.currentUser?.uid ?? "",
             createdOn: new Date(),
             updatedOn: new Date(),
             pageUrl: window.location.href
@@ -97,10 +99,14 @@ const useCMS = ()=>{
         }
       
         return newResponse
-    },[authUser?.uid, getContent])
+    },[getContent])
 
     const updateContent = useCallback(async (contentId: string, contentParams: TInputSchema)=>{
         console.log("useCMS > updateContent")
+
+        if(!auth.currentUser){
+            throw new Error("You need to login inorder to perform this operation")
+        }
 
         const docData = await getContent(contentId)   
 
@@ -116,19 +122,17 @@ const useCMS = ()=>{
         const dataSchema: TDataStoreSchema = {
             ...docData,
             ...contentParams, 
-            authUserId: authUser?.uid ?? "",   
+            authUserId: auth.currentUser?.uid ?? "",   
             updatedOn: new Date(),
             pageUrl: window.location.href
         }
-        
+
         await updateDoc(docRef, dataSchema)
 
         const updatedDocData = await getContent(contentId)     
         
-        console.log("updatedDocData", updatedDocData)
-
         return updatedDocData;
-    },[addContent, authUser?.uid, getContent])
+    },[addContent, getContent])
 
     return { addContent, updateContent, getContent }
 }

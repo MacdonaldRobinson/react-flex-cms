@@ -28,20 +28,24 @@ export const EditableWrapperHeader = styled.div`
         flex-direction: column;
         gap: 10px;
         padding: 10px;
-        background-color: lightgray;
     }
 `;
 
 export const EditableWrapper = styled.div`
+    &:hover {
+        &:not(.IsShowingEditor) {
+            cursor: pointer;
+            border: 1px solid black;
+        }
+    }
+
     &.IsShowingEditor {
         cursor: auto;
         margin-top: 10px;
-    }
+        background-color: lightgray;
+        border: 1px solid black;
 
-    &.canEdit {
         &:hover {
-            cursor: pointer;
-            border: 1px solid black;
         }
     }
 `;

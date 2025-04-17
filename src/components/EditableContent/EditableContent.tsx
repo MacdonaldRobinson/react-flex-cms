@@ -222,6 +222,12 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
         setShowEditor(!showEditor);
     }, [showEditor]);
 
+    const handleEditableContentClick = useCallback(() => {
+        if (canEdit && !showEditor) {
+            handleToggleEditorClick();
+        }
+    }, [canEdit]);
+
     const handleSaveClick = useCallback(() => {
         setInfo("Saving ...");
         debounceSetContent();
@@ -252,9 +258,7 @@ const EditableContent = React.memo(({ contentId, children }: TEditor) => {
     return (
         <EditableWrapper
             className={clsx({ IsShowingEditor: showEditor, canEdit: canEdit })}
-            onClick={() =>
-                canEdit && !showEditor ? handleToggleEditorClick() : null
-            }
+            onClick={handleEditableContentClick}
         >
             {authUser && canEdit && (
                 <EditableWrapperHeader className={showEditor ? "show" : ""}>
