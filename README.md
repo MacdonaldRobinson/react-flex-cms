@@ -1,3 +1,5 @@
+I have published an npm package for this project here: https://www.npmjs.com/package/flex-cms
+
 There are 2 components exposed:
 
 ```javascript
