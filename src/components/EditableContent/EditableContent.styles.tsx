@@ -61,6 +61,7 @@ export const EditableWrapper = styled.div`
             & .ProseMirror {
                 padding: 10px !important;
                 margin: 10px !important;
+                margin-left: 70px !important;
                 min-height: inherit !important;
             }
 
