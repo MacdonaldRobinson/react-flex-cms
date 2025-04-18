@@ -6,7 +6,7 @@ import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 export default defineConfig({
   plugins: [
     react(),
-    cssInjectedByJsPlugin()
+    cssInjectedByJsPlugin(),
   ],
   build: {
     lib: {
@@ -26,5 +26,6 @@ export default defineConfig({
         }
       }
     }
-  }
+  },
+  publicDir: 'public',
 })
