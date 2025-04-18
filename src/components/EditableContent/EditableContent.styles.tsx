@@ -53,7 +53,7 @@ export const EditableWrapper = styled.div`
         &:hover {
             &:not(.IsShowingEditor) {
                 cursor: pointer;
-                border: 1px solid black;
+                outline: 1px solid;
             }
         }
 
@@ -80,6 +80,15 @@ export const EditorWrapper = styled.div`
     display: flex;
     flex-direction: row;
     gap: 5px;
+    justify-content: stretch;
+    & > div {
+        outline: 1px solid;
+    }
+    & > div:first-child {
+        background-color: white;
+        width: 100%;
+        padding: 10px;
+    }
 `;
 
 export const EditorHistoryWrapper = styled.div`
