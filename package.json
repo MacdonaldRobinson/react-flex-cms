@@ -1,6 +1,7 @@
 {
   "name": "flex-cms",
   "version": "0.1.13",
+  "type": "module",
   "description": "A flexible editable CMS content component for React",
   "main": "./build/index.cjs.js",
   "module": "./build/index.es.js",
@@ -20,12 +21,14 @@
     "dev": "vite",
     "build": "tsc --build tsconfig.build.json && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview", 
+    "postinstall": "node ./postinstall.js"
   },
   "peerDependencies": {
     "firebase": "^11.0.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "@tinymce/tinymce-react": "^6.1.0"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.16",
@@ -43,10 +46,10 @@
     "styled-components": "^6.1.17",
     "typescript": "~5.7.2",
     "vite": "^6.2.0",
-    "vite-plugin-css-injected-by-js": "^3.5.2"
+    "vite-plugin-css-injected-by-js": "^3.5.2",
+    "@tinymce/tinymce-react": "^6.1.0"
   },
   "dependencies": {
-    "@tinymce/tinymce-react": "^6.1.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "fs-extra": "^11.3.0"
