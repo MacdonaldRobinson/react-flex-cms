@@ -9,7 +9,7 @@
   "files": [
     "build",
     "dist",
-    "postinstall.mjs"
+    "postinstall.js"
   ],
   "exports": {
     ".": {
