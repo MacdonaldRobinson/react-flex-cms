@@ -40,9 +40,6 @@ const Editor = forwardRef<TEditorRef, TEditor>(
             console.log("Editor > handleOnEditorInit", editorRef.current);
             if (editorRef.current && onEditorInit) {
                 onEditorInit();
-
-                console.log("INIT initialContent", initialContent);
-
                 setEditorContent(initialContent);
             }
         }, [editorRef]);
