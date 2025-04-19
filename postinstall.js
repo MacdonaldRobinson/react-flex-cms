@@ -1,42 +1,48 @@
 import fse from "fs-extra";
 import path from "path";
 import { fileURLToPath } from "url";
+import { findUp } from "find-up";
 
-console.log("🎉 POSTINSTALL RAN!");
-
-// Proper ESM __dirname emulation
+// Emulate __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
-// Are we running inside node_modules? (i.e., installed in another project)
-const isInstalledAsDependency = __dirname.includes("node_modules/flex-cms");
+const filename = import.meta.url;
 
-// Resolve top-level dir of the host project
-const topDir = isInstalledAsDependency
-    ? path.resolve(__dirname.split("node_modules")[0]) // the app using the package
-    : __dirname; // dev mode inside the actual flex-cms repo
+console.log("Running postinstall.js from ", __filename);
+console.log();
 
-try {
-    const tinymceSourceDir = isInstalledAsDependency
-        ? path.join(topDir, "node_modules", "flex-cms", "build", "tinymce")
-        : path.join(topDir, "node_modules", "tinymce");
+// Find the top-level directory (project root)
+const projectRoot = path.dirname(await findUp("package.json"));
 
-    const tinymceDestDir = path.join(topDir, "public", "tinymce");
+// Define the source paths
+const sourcePath1 = path.join(
+    projectRoot,
+    "node_modules",
+    "flex-cms",
+    "build",
+    "tinymce"
+);
 
-    if (!fse.existsSync(tinymceSourceDir)) {
-        console.warn(
-            "⚠️ TinyMCE source directory does not exist:",
-            tinymceSourceDir
-        );
-    } else {
-        fse.ensureDirSync(tinymceDestDir);
-        fse.emptyDirSync(tinymceDestDir);
-        fse.copySync(tinymceSourceDir, tinymceDestDir, { overwrite: true });
+const sourcePath2 = path.join(projectRoot, "node_modules", "tinymce");
 
-        console.log(
-            `✔ Copied TinyMCE from '${tinymceSourceDir}' to '${tinymceDestDir}'`
-        );
-    }
-} catch (err) {
-    console.error("❌ Error copying TinyMCE:", err);
+// Define the destination path
+const destinationPath = path.join(projectRoot, "public", "tinymce");
+
+console.log("Checking: ", sourcePath1);
+console.log("Checking: ", sourcePath2);
+console.log("Checking: ", destinationPath);
+console.log();
+
+// Check if source paths exist, and copy accordingly
+if (await fse.pathExists(sourcePath1)) {
+    console.log("Moving from: ", sourcePath1, "to ", destinationPath);
+    fse.copySync(sourcePath1, destinationPath, { overwrite: true });
+} else if (await fse.pathExists(sourcePath2)) {
+    console.log("Moving from: ", sourcePath2, "to ", destinationPath);
+    fse.copySync(sourcePath2, destinationPath, { overwrite: true });
+} else {
+    console.error("Error copying");
 }
+
+console.log();
+console.log("Finished running postinstall from ", filename);
